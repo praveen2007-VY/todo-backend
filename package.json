@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "nodemon api/index.js"
+    "dev": "nodemon api/server.js"
   },
   "dependencies": {
     "express": "^4.19.2",
