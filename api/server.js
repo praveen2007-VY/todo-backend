@@ -1,55 +1,64 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import cors from 'cors';
+import express from "express";
+import cors from "cors";
+import { connectDB } from "../lib/db.js";
+import mongoose from "mongoose";
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// ✅ use Atlas via environment variable
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error(err));
-
-const userSchema = new mongoose.Schema({
+const taskSchema = new mongoose.Schema({
   title: String,
   description: String,
   completed: {
     type: Boolean,
-    default: false
+    default: false,
+  },
+});
+
+const Tasks = mongoose.models.Tasks || mongoose.model("Tasks", taskSchema);
+
+app.get("/todo", async (req, res) => {
+  try {
+    await connectDB();
+    const data = await Tasks.find();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch todos" });
   }
 });
 
-const Tasks = mongoose.model('Tasks', userSchema);
-
-// CREATE
-app.post('/todo', async (req, res) => {
-  const data = new Tasks(req.body);
-  await data.save();
-  res.status(201).json(data);
+app.post("/todo", async (req, res) => {
+  try {
+    await connectDB();
+    const task = new Tasks(req.body);
+    await task.save();
+    res.status(201).json(task);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to create todo" });
+  }
 });
 
-// READ
-app.get('/todo', async (req, res) => {
-  const data = await Tasks.find();
-  res.json(data);
+app.put("/todo/:id", async (req, res) => {
+  try {
+    await connectDB();
+    const updated = await Tasks.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update todo" });
+  }
 });
 
-// UPDATE
-app.put('/todo/:id', async (req, res) => {
-  const updated = await Tasks.findByIdAndUpdate(
-    req.params.id,
-    req.body,
-    { new: true }
-  );
-  res.json(updated);
+app.delete("/todo/:id", async (req, res) => {
+  try {
+    await connectDB();
+    await Tasks.findByIdAndDelete(req.params.id);
+    res.json({ message: "Deleted" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete todo" });
+  }
 });
 
-// DELETE
-app.delete('/todo/:id', async (req, res) => {
-  await Tasks.findByIdAndDelete(req.params.id);
-  res.json({ message: "Deleted" });
-});
-
-// ✅ IMPORTANT: export app (NO app.listen)
 export default app;
